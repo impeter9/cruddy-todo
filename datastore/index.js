@@ -56,11 +56,19 @@ exports.update = (id, text, callback) => {
   //   callback(null, { id, text });
   // }
   var loc = exports.dataDir + '/' + id + '.txt';
-  fs.writeFile(loc, text, (err) => {
+  fs.readFile(loc, (err) => {
     if (err) {
       callback(new Error(`No item with id: ${id}`));
+      return;
     } else {
-      callback(null, text);
+      fs.writeFile(loc, text, (err) => {
+        if (err) {
+          callback(new Error(`No item with id: ${id}`));
+          return;
+        } else {
+          callback(null, text);
+        }
+      });
     }
   });
 };
@@ -68,7 +76,7 @@ exports.update = (id, text, callback) => {
 exports.delete = (id, callback) => {
   var loc = exports.dataDir + '/' + id + '.txt';
 
-  fs.readFile(loc, 'utf8', (err, data) => {
+  fs.unlink(loc, (err) => {
     if (err) {
       callback(new Error(`No item with id: ${id}`));
     } else {
