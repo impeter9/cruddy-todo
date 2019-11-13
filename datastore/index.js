@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('underscore');
 const counter = require('./counter');
+const Promise = require('bluebird');
 
 // var items = {};
 
@@ -27,14 +28,38 @@ exports.create = (text, callback) => {
 };
 
 exports.readAll = (callback) => {
-  fs.readdir(exports.dataDir, (err, fileNames) => {
-    if (err) {
-      callback(null, []);
-    } else {
-      callback(null, _.map(fileNames, (fileName) => { fileName = path.basename(fileName, '.txt'); return { id: fileName, text: fileName }; }));
-    }
-  });
+  var promises = [];
+  var readdirAsync = Promise.promisify(fs.readdir);
+  var readOneAsync = Promise.promisify(exports.readOne);
+
+  readdirAsync(exports.dataDir)
+    .catch(function (error) {
+      console.log('error readdirAsync', error);
+      return;
+    })
+    .then(function (fileNames) {
+      for (var i = 0; i < fileNames.length; i++) {
+        promises.push(readOneAsync(fileNames[i].slice(0, 5)));
+      }
+      Promise.all(promises).then(function (values) {
+        callback(null, values);
+      });
+    });
 };
+
+// exports.readAll = (callback) => {
+//   fs.readdir(exports.dataDir, (err, fileNames) => {
+//     if (err) {
+//       callback(null, []);
+//     } else {
+//       callback(null,
+//         _.map(fileNames, (fileName) => {
+//           fileName = path.basename(fileName, '.txt');
+//           return { id: fileName, text: fileName };
+//         }));
+//     }
+//   });
+// };
 
 exports.readOne = (id, callback) => {
   var loc = exports.dataDir + '/' + id + '.txt';
@@ -48,13 +73,6 @@ exports.readOne = (id, callback) => {
 };
 
 exports.update = (id, text, callback) => {
-  // var item = items[id];
-  // if (!item) {
-  //   callback(new Error(`No item with id: ${id}`));
-  // } else {
-  //   items[id] = text;
-  //   callback(null, { id, text });
-  // }
   var loc = exports.dataDir + '/' + id + '.txt';
   fs.readFile(loc, (err) => {
     if (err) {
@@ -83,14 +101,6 @@ exports.delete = (id, callback) => {
       callback();
     }
   });
-  // var item = items[id];
-  // delete items[id];
-  // if (!item) {
-  //   // report an error if item not found
-  //   callback(new Error(`No item with id: ${id}`));
-  // } else {
-  //   callback();
-  // }
 };
 
 // Config+Initialization code -- DO NOT MODIFY /////////////////////////////////
